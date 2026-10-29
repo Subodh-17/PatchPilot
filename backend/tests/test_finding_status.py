@@ -1,15 +1,14 @@
-import asyncio
 import os
 import tempfile
 import uuid
+
 import aiosqlite
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app as fastapi_app
 from app import db as app_db
+from app.main import app as fastapi_app
 from app.models import Finding, FindingStatusUpdate
-
 
 client = TestClient(fastapi_app)
 
@@ -17,6 +16,7 @@ client = TestClient(fastapi_app)
 # =====================================================================
 # 1. Pydantic Model Unit Tests
 # =====================================================================
+
 
 class TestFindingModelStatus:
     def test_default_status_is_open(self):
@@ -57,9 +57,12 @@ class TestFindingModelStatus:
 # 2. Endpoint Unit & Error Handling Tests
 # =====================================================================
 
+
 class TestFindingStatusEndpoints:
     def test_patch_status_invalid_value_returns_400(self):
-        res = client.patch("/findings/test-finding-1/status", json={"status": "resolved"})
+        res = client.patch(
+            "/findings/test-finding-1/status", json={"status": "resolved"}
+        )
         assert res.status_code == 400
         assert "Invalid status value" in res.json()["detail"]
 
@@ -72,7 +75,9 @@ class TestFindingStatusEndpoints:
             return None
 
         monkeypatch.setattr(app_db, "get_finding", _mock_get_finding)
-        res = client.patch("/findings/nonexistent-id/status", json={"status": "accepted"})
+        res = client.patch(
+            "/findings/nonexistent-id/status", json={"status": "accepted"}
+        )
         assert res.status_code == 404
         assert "not found" in res.json()["detail"]
 
@@ -80,6 +85,7 @@ class TestFindingStatusEndpoints:
 # =====================================================================
 # 3. Full Integration & Persistence Across Re-fetch Tests
 # =====================================================================
+
 
 class TestFindingStatusPersistence:
     @pytest.mark.anyio
@@ -102,9 +108,60 @@ class TestFindingStatusPersistence:
                     (job_id, "test-project", "zip"),
                 )
                 findings_to_insert = [
-                    (f1_id, job_id, "rule-1", "Vulnerability 1", "HIGH", "sast", "a.py", 10, "CWE-89", "semgrep", "msg 1", None, None, 0.9, None, 8.5),
-                    (f2_id, job_id, "rule-2", "Vulnerability 2", "MEDIUM", "sast", "b.py", 20, "CWE-79", "semgrep", "msg 2", None, None, 0.7, None, 6.0),
-                    (f3_id, job_id, "rule-3", "Vulnerability 3", "LOW", "sast", "c.py", 30, "CWE-200", "semgrep", "msg 3", None, None, 0.3, None, 3.0),
+                    (
+                        f1_id,
+                        job_id,
+                        "rule-1",
+                        "Vulnerability 1",
+                        "HIGH",
+                        "sast",
+                        "a.py",
+                        10,
+                        "CWE-89",
+                        "semgrep",
+                        "msg 1",
+                        None,
+                        None,
+                        0.9,
+                        None,
+                        8.5,
+                    ),
+                    (
+                        f2_id,
+                        job_id,
+                        "rule-2",
+                        "Vulnerability 2",
+                        "MEDIUM",
+                        "sast",
+                        "b.py",
+                        20,
+                        "CWE-79",
+                        "semgrep",
+                        "msg 2",
+                        None,
+                        None,
+                        0.7,
+                        None,
+                        6.0,
+                    ),
+                    (
+                        f3_id,
+                        job_id,
+                        "rule-3",
+                        "Vulnerability 3",
+                        "LOW",
+                        "sast",
+                        "c.py",
+                        30,
+                        "CWE-200",
+                        "semgrep",
+                        "msg 3",
+                        None,
+                        None,
+                        0.3,
+                        None,
+                        3.0,
+                    ),
                 ]
                 await app_db.create_findings(db, findings_to_insert)
 
@@ -118,12 +175,16 @@ class TestFindingStatusPersistence:
             assert findings[f3_id]["status"] == "open"
 
             # 2. Update f1 to "accepted"
-            patch_res1 = client.patch(f"/findings/{f1_id}/status", json={"status": "accepted"})
+            patch_res1 = client.patch(
+                f"/findings/{f1_id}/status", json={"status": "accepted"}
+            )
             assert patch_res1.status_code == 200
             assert patch_res1.json() == {"id": f1_id, "status": "accepted"}
 
             # 3. Update f2 to "ignored"
-            patch_res2 = client.patch(f"/findings/{f2_id}/status", json={"status": "ignored"})
+            patch_res2 = client.patch(
+                f"/findings/{f2_id}/status", json={"status": "ignored"}
+            )
             assert patch_res2.status_code == 200
             assert patch_res2.json() == {"id": f2_id, "status": "ignored"}
 
@@ -138,7 +199,9 @@ class TestFindingStatusPersistence:
             assert reloaded_findings[f3_id]["status"] == "open"
 
             # 5. Revert f1 back to "open"
-            revert_res = client.patch(f"/findings/{f1_id}/status", json={"status": "open"})
+            revert_res = client.patch(
+                f"/findings/{f1_id}/status", json={"status": "open"}
+            )
             assert revert_res.status_code == 200
             assert revert_res.json() == {"id": f1_id, "status": "open"}
 
