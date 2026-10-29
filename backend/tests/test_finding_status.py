@@ -74,6 +74,9 @@ class TestFindingStatusEndpoints:
         async def _mock_get_finding(db, finding_id):
             return None
 
+        import app.main
+
+        monkeypatch.setattr(app.main, "get_finding", _mock_get_finding)
         monkeypatch.setattr(app_db, "get_finding", _mock_get_finding)
         res = client.patch(
             "/findings/nonexistent-id/status", json={"status": "accepted"}
